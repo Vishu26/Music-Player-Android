@@ -52,7 +52,7 @@
         android:id="@+id/artistname"/>
     <SeekBar
         android:id="@+id/seekBar"
-        android:layout_width="300dp"
+        android:layout_width="320dp"
         android:layout_height="wrap_content"
         android:layout_below="@+id/artistname"
         android:layout_marginTop="20dp"
@@ -85,10 +85,36 @@
         android:id="@+id/play"
         android:layout_width="90dp"
         android:layout_height="90dp"
-        android:layout_below="@+id/seekBar"
+        android:layout_below="@+id/edur"
         android:layout_marginTop="30dp"
         android:layout_centerHorizontal="true"
         android:background="@mipmap/pause"
+        android:scaleType="fitXY"
+        android:backgroundTint="#0a85d0"/>
+
+    <View
+        android:id="@+id/next"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_below="@+id/edur"
+        android:layout_toRightOf="@+id/play"
+        android:layout_marginTop="30dp"
+        android:layout_marginStart="30dp"
+        android:layout_centerHorizontal="true"
+        android:background="@mipmap/next"
+        android:scaleType="fitXY"
+        android:backgroundTint="#0a85d0"/>
+
+    <View
+        android:id="@+id/prev"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_below="@+id/edur"
+        android:layout_toLeftOf="@+id/play"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="30dp"
+        android:layout_centerHorizontal="true"
+        android:background="@mipmap/prev"
         android:scaleType="fitXY"
         android:backgroundTint="#0a85d0"/>
 </RelativeLayout>

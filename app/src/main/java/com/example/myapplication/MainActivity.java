@@ -5,13 +5,20 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -21,10 +28,11 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import java.io.File;
+import java.lang.reflect.Field;
 
 public class MainActivity extends AppCompatActivity {
 
-    private View play;
+    private View play, next, prev;
     private int song = 1;
     private ListView listView;
     private String[] string;
@@ -33,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler;
     private SeekBar seekBar;
     private TextView sdur, edur;
+    private int filenum=0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +68,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        MyPhoneStateListener phoneStateListener = new MyPhoneStateListener();
+        //IntentFilter intentFilter = new IntentFilter();
+        //intentFilter.addAction(Intent.ACTION_CALL);
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+        next = findViewById(R.id.next);
+        prev = findViewById(R.id.prev);
         seekBar = findViewById(R.id.seekBar);
         handler = new Handler();
         string = new String[]{"Whose hands play in my mind\n" +
@@ -96,7 +112,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (ContextCompat.checkSelfPermission(getApplicationContext(),
                 Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED){
+                != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED ){
 
 
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
@@ -108,14 +126,214 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                    Manifest.permission.READ_PHONE_STATE)) {
+            } else {
+                // No explanation needed; request the permission
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.READ_PHONE_STATE},1);
+
+            }
+
         } else {
 
+            final Field[] fields=R.raw.class.getFields();
+            //Log.i("Raw Asset: ", fields[count].getName();
+
+            try {
+                mpintro = MediaPlayer.create(this, fields[filenum].getInt(fields[filenum]));
+                //mpintro.setLooping(true);
+                mpintro.start();
+                seekBar.setMax(mpintro.getDuration() / 1000);
+                MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
+                AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                metaRetriever.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                String artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                String title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+
+                if (title == null) {
+                    TextView name = findViewById(R.id.songname);
+                    name.setText("Song " + filenum);
+                } else {
+                    TextView name = findViewById(R.id.songname);
+                    name.setText(title);
+                }
+                if (artist == null) {
+                    TextView ar = findViewById(R.id.artistname);
+                    ar.setText("Viral Dave");
+                } else {
+                    TextView ar = findViewById(R.id.artistname);
+                    ar.setText(artist);
+                }
+            }
+            catch (Exception e){
+                Log.d("e", e.toString());
+            }
+
+            next.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    try {
+                        if (filenum == fields.length - 1) {
+                            mpintro.reset();
+                            filenum = 0;
+                            AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                            mpintro.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                            /* Prepare the mediaplayer */
+                            mpintro.prepare();
+                            /* start */
+                            mpintro.start();
+                        } else {
+                            filenum += 1;
+                            mpintro.reset();
+                            AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                            mpintro.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                            /* Prepare the mediaplayer */
+                            mpintro.prepare();
+                            /* start */
+                            mpintro.start();
+                        }
+
+                    seekBar.setMax(mpintro.getDuration() / 1000);
+                    seekBar.setProgress(0);
+                    MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
+                    AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                    metaRetriever.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                    String artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                    String title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+
+                    if (title == null) {
+                        TextView name = findViewById(R.id.songname);
+                        name.setText("Song " + filenum);
+                    } else {
+                        TextView name = findViewById(R.id.songname);
+                        name.setText(title);
+                    }
+                    if (artist == null) {
+                        TextView ar = findViewById(R.id.artistname);
+                        ar.setText("Viral Dave");
+                    } else {
+                        TextView ar = findViewById(R.id.artistname);
+                        ar.setText(artist);
+                    }
+                }
+                    catch (Exception e){
+                        Log.d("e", e.toString());
+                    }
+                }
+            });
+
+            prev.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    try {
+                        if (filenum == 0) {
+                            mpintro.reset();
+                            filenum = fields.length - 1;
+                            AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                            mpintro.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                            /* Prepare the mediaplayer */
+                            mpintro.prepare();
+                            /* start */
+                            mpintro.start();
+                        } else {
+                            filenum -= 1;
+                            mpintro.reset();
+                            AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                            mpintro.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                            /* Prepare the mediaplayer */
+                            mpintro.prepare();
+                            /* start */
+                            mpintro.start();
+                        }
+
+                    seekBar.setMax(mpintro.getDuration() / 1000);
+                    seekBar.setProgress(0);
+                    MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
+                    AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                    metaRetriever.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                    String artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                    String title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+
+                    if (title == null) {
+                        TextView name = findViewById(R.id.songname);
+                        name.setText("Song " + filenum);
+                    } else {
+                        TextView name = findViewById(R.id.songname);
+                        name.setText(title);
+                    }
+                    if (artist == null) {
+                        TextView ar = findViewById(R.id.artistname);
+                        ar.setText("Viral Dave");
+                    } else {
+                        TextView ar = findViewById(R.id.artistname);
+                        ar.setText(artist);
+                    }
+                }
+                    catch (Exception e){
+                        Log.d("e", e.toString());
+                    }
+                }
+            });
+
+            mpintro.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    try {
+                        if (filenum==fields.length-1){
+                            mpintro.reset();
+                            filenum=0;
+                            AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                            mpintro.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                            /* Prepare the mediaplayer */
+                            mpintro.prepare();
+                            /* start */
+                            mpintro.start();
+                        }
+                        else{
+                            filenum+=1;
+                            mpintro.reset();
+                            AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                            mpintro.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                            /* Prepare the mediaplayer */
+                            mpintro.prepare();
+                            /* start */
+                            mpintro.start();
+                        }
+                        seekBar.setMax(mpintro.getDuration()/1000);
+                        seekBar.setProgress(0);
+                        MediaMetadataRetriever metaRetriever= new MediaMetadataRetriever();
+                        AssetFileDescriptor afd = getResources().openRawResourceFd(fields[filenum].getInt(fields[filenum]));
+                        metaRetriever.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(), afd.getLength());
+                        String artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+                        String title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+
+                        if(title==null){
+                            TextView name = findViewById(R.id.songname);
+                            name.setText("Song "+filenum);
+                        }
+                        else{
+                            TextView name = findViewById(R.id.songname);
+                            name.setText(title);
+                        }
+                        if(artist==null){
+                            TextView ar = findViewById(R.id.artistname);
+                            ar.setText("Viral Dave");
+                        }
+                        else{
+                            TextView ar = findViewById(R.id.artistname);
+                            ar.setText(artist);
+                        }
 
 
-            mpintro = MediaPlayer.create(this, Uri.parse("/storage/emulated/0/Vsongs/Asvaar.mp3"));
-            mpintro.setLooping(true);
-            mpintro.start();
-            seekBar.setMax(mpintro.getDuration()/1000);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
             MainActivity.this.runOnUiThread(new Runnable() {
 
                 @Override
@@ -129,6 +347,8 @@ public class MainActivity extends AppCompatActivity {
                     handler.postDelayed(this, 1000);
                 }
             });
+
+
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
                 @Override
@@ -148,15 +368,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
-            MediaMetadataRetriever metaRetriever= new MediaMetadataRetriever();
-            metaRetriever.setDataSource(getRealPathFromURI(Uri.parse("/storage/emulated/0/Vsongs/Asvaar.mp3")));
-            String artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
-            String title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
 
-            TextView name = findViewById(R.id.songname);
-            name.setText(title);
-            TextView ar = findViewById(R.id.artistname);
-            ar.setText(artist);
         }
     }
     private String getRealPathFromURI(Uri uri) {
@@ -193,5 +405,17 @@ public class MainActivity extends AppCompatActivity {
 
         // return timer string
         return finalTimerString;
+    }
+
+    public class MyPhoneStateListener extends PhoneStateListener{
+        @Override
+        public void onCallStateChanged(int state, String phoneNumber) {
+            super.onCallStateChanged(state, phoneNumber);
+            if(song==1){
+                play.setBackground(getResources().getDrawable(R.mipmap.play));
+                song=0;
+                mpintro.pause();
+            }
+        }
     }
 }
